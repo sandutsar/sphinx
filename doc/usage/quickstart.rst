@@ -18,7 +18,7 @@ its :doc:`significant extensibility capabilities </development/index>`.
 The goal of this document is to give you a quick taste of what Sphinx is and
 how you might use it. When you're done here, you can check out the
 :doc:`installation guide </usage/installation>` followed by the intro to the
-default markup format used by Sphinx, :doc:`reStucturedText
+default markup format used by Sphinx, :doc:`reStructuredText
 </usage/restructuredtext/index>`.
 
 For a great "introduction" to writing docs in general -- the whys and hows, see
@@ -39,7 +39,7 @@ Sphinx comes with a script called :program:`sphinx-quickstart` that sets up a
 source directory and creates a default :file:`conf.py` with the most useful
 configuration values from a few questions it asks you. To use this, run:
 
-.. code-block:: shell
+.. code-block:: console
 
    $ sphinx-quickstart
 
@@ -128,13 +128,13 @@ Running the build
 Now that you have added some files and content, let's make a first build of the
 docs.  A build is started with the :program:`sphinx-build` program:
 
-.. code-block:: shell
+.. code-block:: console
 
-   $ sphinx-build -b html sourcedir builddir
+   $ sphinx-build -M html sourcedir outputdir
 
-where *sourcedir* is the :term:`source directory`, and *builddir* is the
+where *sourcedir* is the :term:`source directory`, and *outputdir* is the
 directory in which you want to place the built documentation.
-The :option:`-b <sphinx-build -b>` option selects a builder; in this example
+The :option:`-M <sphinx-build -M>` option selects a builder; in this example
 Sphinx will build HTML files.
 
 |more| Refer to the :doc:`sphinx-build man page </man/sphinx-build>` for all
@@ -144,7 +144,7 @@ However, :program:`sphinx-quickstart` script creates a :file:`Makefile` and a
 :file:`make.bat` which make life even easier for you. These can be executed by
 running :command:`make` with the name of the builder. For example.
 
-.. code-block:: shell
+.. code-block:: console
 
    $ make html
 
@@ -220,7 +220,7 @@ Each domain will have special rules for how the signatures can look like, and
 make the formatted output look pretty, or add specific features like links to
 parameter types, e.g. in the C/C++ domains.
 
-|more| See :doc:`/usage/restructuredtext/domains` for all the available domains
+|more| See :doc:`/usage/domains/index` for all the available domains
 and their directives/roles.
 
 
@@ -332,7 +332,6 @@ More topics to be covered
 - :doc:`Other extensions </usage/extensions/index>`:
 - Static files
 - :doc:`Selecting a theme </usage/theming>`
-- :doc:`/usage/advanced/setuptools`
 - :ref:`Templating <templating>`
 - Using extensions
 - :ref:`Writing extensions <dev-extensions>`

@@ -30,13 +30,87 @@ Creating themes
 Themes take the form of either a directory or a zipfile (whose name is the
 theme name), containing the following:
 
-* A :file:`theme.conf` file.
+* Either a :file:`theme.toml` file (preferred) or a :file:`theme.conf` file.
 * HTML templates, if needed.
 * A ``static/`` directory containing any static files that will be copied to the
   output static directory on build.  These can be images, styles, script files.
 
+Theme configuration (``theme.toml``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The :file:`theme.toml` file is a TOML_ document,
+containing two tables: ``[theme]`` and ``[options]``.
+
+The ``[theme]`` table defines the theme's settings:
+
+* **inherit** (string): The name of the base theme from which to inherit
+  settings, options, templates, and static files.
+  All static files from theme 'ancestors' will be used.
+  The theme will use all options defined in inherited themes.
+  Finally, inherited themes will be used to locate missing templates
+  (for example, if ``"basic"`` is used as the base theme, most templates will
+  already be defined).
+
+  If set to ``"none"``, the theme will not inherit from any other theme.
+  Inheritance is recursive, forming a chain of inherited themes
+  (e.g. ``default`` -> ``classic`` -> ``basic`` -> ``none``).
+
+* **stylesheets** (list of strings): A list of CSS filenames which will be
+  included in generated HTML header.
+  Setting the   :confval:`html_style` config value will override this setting.
+
+  Other mechanisms for including multiple stylesheets include ``@import`` in CSS
+  or using a custom HTML template with appropriate ``<link rel="stylesheet">`` tags.
+
+* **sidebars** (list of strings): A list of sidebar templates.
+  This can be overridden by the user via the :confval:`html_sidebars` config value.
+
+* **pygments_style** (table): A TOML table defining the names of Pygments styles
+  to use for highlighting syntax.
+  The table has two recognised keys: ``default`` and ``dark``.
+  The style defined in the ``dark`` key will be used when
+  the CSS media query ``(prefers-color-scheme: dark)`` evaluates to true.
+
+  ``[theme.pygments_style.default]`` can be overridden by the user via the
+  :confval:`pygments_style` config value.
+
+The ``[options]`` table defines the options for the theme.
+It is structured such that each key-value pair corresponds to a variable name
+and the corresponding default value.
+These options can be overridden by the user in :confval:`html_theme_options`
+and are accessible from all templates as ``theme_<name>``.
+
+.. versionadded:: 7.3
+   ``theme.toml`` support.
+
+.. _TOML: https://toml.io/en/
+
+Exemplar :file:`theme.toml` file:
+
+.. code-block:: toml
+
+   [theme]
+   inherit = "basic"
+   stylesheets = [
+       "main-CSS-stylesheet.css",
+   ]
+   sidebars = [
+       "localtoc.html",
+       "relations.html",
+       "sourcelink.html",
+       "searchbox.html",
+   ]
+   # Style names from https://pygments.org/styles/
+   pygments_style = { default = "style_name", dark = "dark_style" }
+
+   [options]
+   variable = "default value"
+
+Theme configuration (``theme.conf``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 The :file:`theme.conf` file is in INI format [1]_ (readable by the standard
-Python :mod:`ConfigParser` module) and has the following structure:
+Python :mod:`configparser` module) and has the following structure:
 
 .. sourcecode:: ini
 
@@ -56,10 +130,10 @@ Python :mod:`ConfigParser` module) and has the following structure:
   want to also inherit the stylesheet, include it via CSS' ``@import`` in your
   own.
 
-* The **stylesheet** setting gives the name of a CSS file which will be
-  referenced in the HTML header.  If you need more than one CSS file, either
-  include one from the other via CSS' ``@import``, or use a custom HTML template
-  that adds ``<link rel="stylesheet">`` tags as necessary.  Setting the
+* The **stylesheet** setting gives a list of CSS filenames separated commas which
+  will be referenced in the HTML header.  You can also use CSS' ``@import``
+  technique to include one from the other, or use a custom HTML template that
+  adds ``<link rel="stylesheet">`` tags as necessary.  Setting the
   :confval:`html_style` config value will override this setting.
 
 * The **pygments_style** setting gives the name of a Pygments style to use for
@@ -69,7 +143,7 @@ Python :mod:`ConfigParser` module) and has the following structure:
 * The **pygments_dark_style** setting gives the name of a Pygments style to use
   for highlighting when the CSS media query ``(prefers-color-scheme: dark)``
   evaluates to true. It is injected into the page using
-  :meth:`~Sphinx.add_css_file()`.
+  :meth:`~sphinx.application.Sphinx.add_css_file()`.
 
 * The **sidebars** setting gives the comma separated list of sidebar templates
   for constructing sidebars.  This can be overridden by the user in the
@@ -82,31 +156,51 @@ Python :mod:`ConfigParser` module) and has the following structure:
 .. versionadded:: 1.7
    sidebar settings
 
+.. versionchanged:: 5.1
+
+   The stylesheet setting accepts multiple CSS filenames
+
+Convert ``theme.conf`` to ``theme.toml``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+INI-style theme configuration files (``theme.conf``) can be converted to TOML
+via a helper programme distributed with Sphinx.
+This is intended for one-time use, and may be removed without notice in a future
+version of Sphinx.
+
+.. code-block:: console
+
+   $ python -m sphinx.theming conf_to_toml [THEME DIRECTORY PATH]
+
+The required argument is a path to a directory containing a ``theme.conf`` file.
+The programme will write a ``theme.toml`` file in the same directory,
+and will not modify the original ``theme.conf`` file.
+
+.. versionadded:: 7.3
 
 .. _distribute-your-theme:
 
 Distribute your theme as a Python package
 -----------------------------------------
 
-As a way to distribute your theme, you can use Python package.  Python package
-brings to users easy setting up ways.
+As a way to distribute your theme, you can use a Python package.  This makes it
+easier for users to set up your theme.
 
 To distribute your theme as a Python package, please define an entry point
-called ``sphinx.html_themes`` in your ``setup.py`` file, and write a ``setup()``
-function to register your themes using ``add_html_theme()`` API in it::
+called ``sphinx.html_themes`` in your ``pyproject.toml`` file,
+and write a ``setup()`` function to register your theme
+using the :meth:`~sphinx.application.Sphinx.add_html_theme` API:
 
-    # 'setup.py'
-    setup(
-        ...
-        entry_points = {
-            'sphinx.html_themes': [
-                'name_of_theme = your_package',
-            ]
-        },
-        ...
-    )
+.. code-block:: toml
 
-    # 'your_package.py'
+   # pyproject.toml
+
+   [project.entry-points."sphinx.html_themes"]
+   name_of_theme = "your_theme_package"
+
+.. code-block:: python
+
+    # your_theme_package.py
     from os import path
 
     def setup(app):
@@ -128,7 +222,7 @@ If your theme package contains two or more themes, please call
 Templating
 ----------
 
-The :doc:`guide to templating </templating>` is helpful if you want to write your
+The :doc:`guide to templating <templating>` is helpful if you want to write your
 own templates.  What is important to keep in mind is the order in which Sphinx
 searches for templates:
 
@@ -139,7 +233,7 @@ searches for templates:
 When extending a template in the base theme with the same name, use the theme
 name as an explicit directory: ``{% extends "basic/layout.html" %}``.  From a
 user ``templates_path`` template, you can still use the "exclamation mark"
-syntax as described in the templating document.
+syntax as :ref:`described in the templating document <templating-primer>`.
 
 
 .. _theming-static-templates:
@@ -153,12 +247,28 @@ template static files as well as HTML files.  Therefore, Sphinx supports
 so-called "static templates", like this:
 
 If the name of a file in the ``static/`` directory of a theme (or in the user's
-static path, for that matter) ends with ``_t``, it will be processed by the
-template engine.  The ``_t`` will be left from the final file name.  For
-example, the *classic* theme has a file ``static/classic.css_t`` which uses
-templating to put the color options into the stylesheet.  When a documentation
-is built with the classic theme, the output directory will contain a
-``_static/classic.css`` file where all template tags have been processed.
+static path) ends with ``.jinja`` or ``_t``, it will be processed by the
+template engine.  The suffix will be removed from the final file name.
+
+For example, a theme with a ``static/theme_styles.css.jinja`` file could use
+templating to put options into the stylesheet.
+When a documentation project is built with that theme,
+the output directory will contain a ``_static/theme_styles.css`` file
+where all template tags have been processed.
+
+.. versionchanged:: 7.4
+
+   The preferred suffix for static templates is now ``.jinja``, in line with
+   the Jinja project's `recommended file extension`_.
+
+   The ``_t`` file suffix for static templates is now considered 'legacy', and
+   support may eventually be removed.
+
+   If a static template with either a ``_t`` suffix or a ``.jinja`` suffix is
+   detected, it will be processed by the template engine, with the suffix
+   removed from the final file name.
+
+  .. _recommended file extension: https://jinja.palletsprojects.com/en/latest/templates/#template-file-extension
 
 
 Use custom page metadata in HTML templates
@@ -248,11 +358,11 @@ Now, you will have access to this function in jinja like so:
 Add your own static files to the build assets
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you are packaging your own build assets with an extension
-(e.g., a CSS or JavaScript file), you need to ensure that they are placed
-in the ``_static/`` folder of HTML outputs. To do so, you may copy them directly
-into a build's ``_static/`` folder at build time, generally via an event hook.
-Here is some sample code to accomplish this:
+By default, Sphinx copies static files on the ``static/`` directory of the template
+directory.  However, if your package needs to place static files outside of the
+``static/`` directory for some reasons, you need to copy them to the ``_static/``
+directory of HTML outputs manually at the build via an event hook.  Here is an
+example of code to accomplish this:
 
 .. code-block:: python
 
@@ -265,7 +375,7 @@ Here is some sample code to accomplish this:
            copy_asset_file('path/to/myextension/_static/myjsfile.js', staticdir)
 
    def setup(app):
-       app.connect('builder-inited', copy_custom_files)
+       app.connect('build-finished', copy_custom_files)
 
 
 Inject JavaScript based on user configuration
@@ -285,7 +395,7 @@ engine, allowing you to embed variables and control behavior.
 
 For example, the following JavaScript structure:
 
-.. code-block:: bash
+.. code-block:: none
 
    mymodule/
    ├── _static
@@ -294,7 +404,7 @@ For example, the following JavaScript structure:
 
 Will result in the following static file placed in your HTML's build output:
 
-.. code-block:: bash
+.. code-block:: none
 
    _build/
    └── html
@@ -303,7 +413,7 @@ Will result in the following static file placed in your HTML's build output:
 
 See :ref:`theming-static-templates` for more information.
 
-Second, you may use the :meth:`Sphinx.add_js_file` method without pointing it
+Second, you may use the :meth:`.Sphinx.add_js_file` method without pointing it
 to a file. Normally, this method is used to insert a new JavaScript file
 into your site. However, if you do *not* pass a file path, but instead pass
 a string to the "body" argument, then this text will be inserted as JavaScript
@@ -325,7 +435,7 @@ code may use:
     # We connect this function to the step after the builder is initialized
     def setup(app):
         # Tell Sphinx about this configuration variable
-        app.add_config_value('my_javascript_variable')
+        app.add_config_value('my_javascript_variable', 0, 'html')
         # Run the function after the builder is initialized
         app.connect('builder-inited', add_js_variable)
 

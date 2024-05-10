@@ -1,17 +1,16 @@
-"""
-    sphinx.util.tags
-    ~~~~~~~~~~~~~~~~
+from __future__ import annotations
 
-    :copyright: Copyright 2007-2021 by the Sphinx team, see AUTHORS.
-    :license: BSD, see LICENSE for details.
-"""
-
-from typing import Iterator, List
+from typing import TYPE_CHECKING
 
 from jinja2 import nodes
 from jinja2.environment import Environment
-from jinja2.nodes import Node
 from jinja2.parser import Parser
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from jinja2.nodes import Node
+
 
 env = Environment()
 
@@ -21,8 +20,8 @@ class BooleanParser(Parser):
     Only allow condition exprs and/or/not operations.
     """
 
-    def parse_compare(self) -> Node:
-        node: Node
+    def parse_compare(self) -> nodes.Expr:
+        node: nodes.Expr
         token = self.stream.current
         if token.type == 'name':
             if token.value in ('true', 'false', 'True', 'False'):
@@ -38,12 +37,12 @@ class BooleanParser(Parser):
             node = self.parse_expression()
             self.stream.expect('rparen')
         else:
-            self.fail("unexpected token '%s'" % (token,), token.lineno)
+            self.fail(f"unexpected token '{token}'", token.lineno)
         return node
 
 
 class Tags:
-    def __init__(self, tags: List[str] = None) -> None:
+    def __init__(self, tags: list[str] | None = None) -> None:
         self.tags = dict.fromkeys(tags or [], True)
 
     def has(self, tag: str) -> bool:
@@ -65,9 +64,10 @@ class Tags:
         parser = BooleanParser(env, condition, state='variable')
         expr = parser.parse_expression()
         if not parser.stream.eos:
-            raise ValueError('chunk after expression')
+            msg = 'chunk after expression'
+            raise ValueError(msg)
 
-        def eval_node(node: Node) -> bool:
+        def eval_node(node: Node | None) -> bool:
             if isinstance(node, nodes.CondExpr):
                 if eval_node(node.test):
                     return eval_node(node.expr1)
@@ -82,6 +82,7 @@ class Tags:
             elif isinstance(node, nodes.Name):
                 return self.tags.get(node.name, False)
             else:
-                raise ValueError('invalid node, check parsing')
+                msg = 'invalid node, check parsing'
+                raise ValueError(msg)
 
         return eval_node(expr)
